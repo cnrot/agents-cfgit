@@ -33,7 +33,11 @@ export function commit({ cwd, source = 'hook', toolName = 'unknown' }) {
     execFileSync('git', ['add', '.'], { cwd, encoding: 'utf-8' });
     const timestamp = new Date().toISOString().replace('T', ' ').slice(0, 19);
     const message = `auto: snapshot before ${toolName} at ${timestamp}`;
-    execFileSync('git', ['commit', '--no-verify', '--no-gpg-sign', '-m', message], {
+    execFileSync('git', [
+      '-c', 'user.name=config-mgr',
+      '-c', 'user.email=config-mgr@local',
+      'commit', '--no-verify', '--no-gpg-sign', '-m', message,
+    ], {
       cwd,
       encoding: 'utf-8',
       env: { ...process.env, GIT_COMMITTER_DATE: new Date().toISOString() },

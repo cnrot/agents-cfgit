@@ -30,6 +30,8 @@ function setupGitRepo(baseDir) {
   execFileSync('git', ['init'], { cwd: claudeDir, encoding: 'utf-8' });
   execFileSync('git', ['config', 'user.email', 'test@test.com'], { cwd: claudeDir, encoding: 'utf-8' });
   execFileSync('git', ['config', 'user.name', 'Test'], { cwd: claudeDir, encoding: 'utf-8' });
+  // 创建 settings.json 让 detectAgents 能识别 Claude Code 环境
+  writeFileSync(join(claudeDir, 'settings.json'), JSON.stringify({ language: 'chinese' }));
   writeFileSync(join(claudeDir, 'test.txt'), 'hello world\nline2\n');
   execFileSync('git', ['add', '-A'], { cwd: claudeDir, encoding: 'utf-8' });
   execFileSync('git', ['commit', '-m', '初始提交 test.txt'], { cwd: claudeDir, encoding: 'utf-8' });
@@ -81,10 +83,10 @@ async function runTest(name, fn) {
 
 async function main() {
   await runTest('1. 无 .git 时提示错误', async (tmpDir) => {
-    // 只创建 .claude 目录，不初始化 git
+    // 创建 .claude/settings.json 模拟 Claude Code 环境，但不初始化 git
     const claudeDir = join(tmpDir, '.claude');
     mkdirSync(claudeDir, { recursive: true });
-    writeFileSync(join(claudeDir, 'some-config.json'), '{}');
+    writeFileSync(join(claudeDir, 'settings.json'), '{}');
 
     const output = await captureLog(() => recover());
     assert(output.includes('未初始化'), '应提示目录未初始化 git 仓库');
@@ -118,10 +120,10 @@ async function main() {
     assert(output.includes('没有历史记录'), '应提示无历史记录');
   });
 
-  await runTest('5. .claude 目录不存在时提示', async (tmpDir) => {
-    // 不创建任何目录
+  await runTest('5. 未检测到 AI 工具时提示', async (tmpDir) => {
+    // 不创建任何目录或 files，detectAgents 应返回空
     const output = await captureLog(() => recover());
-    assert(output.includes('未初始化'), '应提示目录未初始化 git 仓库');
+    assert(output.includes('未检测到支持的 AI 工具'), '应提示未检测到 AI 工具');
   });
 
   console.log(`\n结果: ${passed} 通过, ${failed} 失败`);

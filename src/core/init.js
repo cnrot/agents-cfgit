@@ -19,10 +19,10 @@ export function initGit(cwd) {
     }
     execFileSync('git', ['add', '.'], { cwd });
     // 设置本地 git user 配置，避免无全局配置时 commit 失败
-    execFileSync('git', ['commit',
+    execFileSync('git', [
       '-c', 'user.name=config-mgr',
       '-c', 'user.email=config-mgr@local',
-      '--no-verify', '--no-gpg-sign', '-m', 'init: 初始配置快照'], {
+      'commit', '--no-verify', '--no-gpg-sign', '-m', 'init: 初始配置快照'], {
       cwd,
       env: { ...process.env, GIT_COMMITTER_DATE: new Date().toISOString() },
     });
