@@ -64,7 +64,7 @@ export function uninstallCodexHooks(codexDir) {
   const configPath = join(codexDir, 'config.toml');
   if (existsSync(configPath)) {
     let config = readFileSync(configPath, 'utf-8');
-    config = config.replace('hooks = true', 'hooks = false');
+    config = config.replace(/^hooks\s*=\s*true$/m, 'hooks = false');
     writeFileSync(configPath, config, 'utf-8');
   }
   return { uninstalled: true, message: 'agentcfg hooks 已移除' };

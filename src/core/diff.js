@@ -25,7 +25,7 @@ export function generateDiffReport({ cwd, hash, filePath }) {
     cwd, encoding: 'utf-8',
   }).trim();
 
-  let added = '', removed = '';
+  let added = '', removed = '', common = '';
   try {
     const diffOutput = execFileSync('git', ['diff', hash, '--', filePath], {
       cwd, encoding: 'utf-8',
@@ -33,6 +33,7 @@ export function generateDiffReport({ cwd, hash, filePath }) {
     const lines = diffOutput.split('\n');
     added = lines.filter(l => l.startsWith('+') && !l.startsWith('+++')).map(l => l.slice(1)).join('\n') || '（无新增行）';
     removed = lines.filter(l => l.startsWith('-') && !l.startsWith('---')).map(l => l.slice(1)).join('\n') || '（无移除行）';
+    common = lines.filter(l => l.startsWith(' ')).map(l => l.slice(1)).join('\n') || '（无共有内容）';
   } catch {
     added = '（无法计算差异）';
     removed = '（无法计算差异）';
@@ -49,6 +50,9 @@ export function generateDiffReport({ cwd, hash, filePath }) {
     '│',
     '├─ - 已移除内容（当前有、备份无）:',
     ...removed.split('\n').map(l => `│   ${l}`),
+    '│',
+    '├─ = 共有内容（两方一致）:',
+    ...common.split('\n').map(l => `│   ${l}`),
     '│',
     '└────────────────────────────────────────',
   ].join('\n');

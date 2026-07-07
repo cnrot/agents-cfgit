@@ -2,6 +2,7 @@ import { join } from 'path';
 import { homedir } from 'os';
 import { existsSync } from 'fs';
 import { getLog } from './core/log.js';
+import { generateDiffReport } from './core/diff.js';
 import { detectAgents } from './install.js';
 
 /**

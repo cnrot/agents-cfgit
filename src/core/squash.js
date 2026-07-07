@@ -6,6 +6,13 @@ export function squashOldHistory({ cwd, daysThreshold = 90 }) {
   if (!existsSync(join(cwd, '.git'))) {
     return { squashed: false, message: '不是 git 仓库' };
   }
+  // 检查工作区是否干净，避免数据丢失
+  const status = execFileSync('git', ['status', '--porcelain'], {
+    cwd, encoding: 'utf-8',
+  }).trim();
+  if (status) {
+    return { squashed: false, message: '工作目录有未提交变更，跳过压缩' };
+  }
   const cutoff = new Date(Date.now() - daysThreshold * 24 * 60 * 60 * 1000);
   const cutoffStr = cutoff.toISOString().replace('T', ' ').slice(0, 19);
   const oldCommits = execFileSync('git', [
@@ -16,16 +23,19 @@ export function squashOldHistory({ cwd, daysThreshold = 90 }) {
     return { squashed: false, message: `无超过 ${daysThreshold} 天的 commit 需要压缩` };
   }
 
-  const oldestHash = oldCommits[0];
-  try {
-    const tags = execFileSync('git', ['tag', '--points-at', oldestHash], {
-      cwd, encoding: 'utf-8',
-    }).trim();
-    if (tags) {
-      return { squashed: false, message: `commit ${oldestHash.slice(0, 8)} 有 tag 豁免，跳过压缩` };
-    }
-  } catch {}
+  // 检查所有待压缩 commit 是否有 tag 豁免
+  for (const hash of oldCommits) {
+    try {
+      const tags = execFileSync('git', ['tag', '--points-at', hash], {
+        cwd, encoding: 'utf-8',
+      }).trim();
+      if (tags) {
+        return { squashed: false, message: `commit ${hash.slice(0, 8)} 有 tag 豁免，跳过压缩` };
+      }
+    } catch {}
+  }
 
+  const oldestHash = oldCommits[0];
   try {
     // 检查是否为根 commit（无父节点）
     let parentExists = false;

@@ -95,14 +95,15 @@ export default async function install() {
       console.log(`   ℹ️  ${hookResult.message}`);
     }
 
-    // Step 3: 安装 SKILL.md
+    // Step 3: 安装 SKILL.md（按 agent 类型替换路径占位符）
     const skillDir = join(agent.dir, 'skills/agentcfg');
     const skillPath = join(skillDir, 'SKILL.md');
     if (!existsSync(skillPath)) {
       mkdirSync(skillDir, { recursive: true });
+      const agentDirName = agent.dir.split(/[/\\]/).pop();
       const skillContent = readFileSync(
         join(__dirname, '../SKILL.md'), 'utf-8'
-      );
+      ).replaceAll('__AGENT_DIR__', agentDirName);
       writeFileSync(skillPath, skillContent, 'utf-8');
       console.log('   ✅ SKILL.md 已安装');
     } else {
