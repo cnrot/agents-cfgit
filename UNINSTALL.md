@@ -32,9 +32,9 @@ npx agentcfg uninstall
 
 ### Git 仓库
 ```bash
-rm -rf ~/.claude/.git
-rm -rf ~/.cursor/.git
-rm -rf ~/.codex/.git
+trash ~/.claude/.git
+trash ~/.cursor/.git
+trash ~/.codex/.git
 ```
 
 ## 备份恢复

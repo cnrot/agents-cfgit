@@ -36,7 +36,7 @@ cat __AGENT_DIR__/.gitignore
 ### 特征 3：有 git 提交记录
 
 ```bash
-cd __AGENT_DIR__ && git log --oneline
+cd ~/__AGENT_DIR__ && git log --oneline
 ```
 预期输出：至少有一条 commit，如 `init: 初始配置快照`
 
@@ -54,7 +54,7 @@ npx agentcfg init
 当用户问"改过什么"时：
 
 ```bash
-cd __AGENT_DIR__ && git log --oneline --max-count=15
+cd ~/__AGENT_DIR__ && git log --oneline --max-count=15
 ```
 
 预期输出：
@@ -72,7 +72,7 @@ e4f5g6h auto: snapshot before Read at 2026-07-05 09:00:00
 当用户问"CLAUDE.md 改过什么"时：
 
 ```bash
-cd __AGENT_DIR__ && git log --oneline --max-count=10 -- CLAUDE.md
+cd ~/__AGENT_DIR__ && git log --oneline --max-count=10 -- CLAUDE.md
 ```
 
 ### 2.3 查看某段时间内的历史
@@ -80,7 +80,7 @@ cd __AGENT_DIR__ && git log --oneline --max-count=10 -- CLAUDE.md
 当用户问"这周改了什么"时：
 
 ```bash
-cd __AGENT_DIR__ && git log --oneline --since="7 days ago"
+cd ~/__AGENT_DIR__ && git log --oneline --since="7 days ago"
 ```
 
 ### 2.4 查看历史中的具体变更内容
@@ -88,13 +88,13 @@ cd __AGENT_DIR__ && git log --oneline --since="7 days ago"
 当用户问"某次 commit 改了啥"时：
 
 ```bash
-cd __AGENT_DIR__ && git diff <commit-hash>^..<commit-hash>
+cd ~/__AGENT_DIR__ && git diff <commit-hash>^..<commit-hash>
 ```
 
 或者查看某个文件在某个版本的具体内容：
 
 ```bash
-cd __AGENT_DIR__ && git show <commit-hash>:CLAUDE.md
+cd ~/__AGENT_DIR__ && git show <commit-hash>:CLAUDE.md
 ```
 
 ---
@@ -113,7 +113,7 @@ cd __AGENT_DIR__ && git show <commit-hash>:CLAUDE.md
 **步骤 1：查历史**
 
 ```bash
-cd __AGENT_DIR__ && git log --oneline -- <用户指定的文件>
+cd ~/__AGENT_DIR__ && git log --oneline -- <用户指定的文件>
 ```
 
 在输出中找到目标 commit，向用户确认：
@@ -165,14 +165,14 @@ cat <文件路径>
 **场景 A：用户说"帮我把前天改的找回来"**
 
 ```bash
-cd __AGENT_DIR__ && git log --oneline --after="2 days ago"
+cd ~/__AGENT_DIR__ && git log --oneline --after="2 days ago"
 ```
 从输出中定位目标文件，走三步恢复法。
 
 **场景 B：用户说"把我某段被删的配置恢复"**
 
 ```bash
-cd __AGENT_DIR__ && git log --oneline -- <文件>
+cd ~/__AGENT_DIR__ && git log --oneline -- <文件>
 ```
 找到含有该配置的 commit，用 `git show` 提取旧版本内容，
 走三步恢复法中的差异比对。
@@ -180,8 +180,8 @@ cd __AGENT_DIR__ && git log --oneline -- <文件>
 **场景 C：用户说"看看这周改了什么，不恢复"**
 
 ```bash
-cd __AGENT_DIR__ && git log --since="7 days ago"
-cd __AGENT_DIR__ && git diff HEAD@{7.days.ago} HEAD --stat
+cd ~/__AGENT_DIR__ && git log --since="7 days ago"
+cd ~/__AGENT_DIR__ && git diff HEAD@{7.days.ago} HEAD --stat
 ```
 
 **场景 D：用户说"回滚到一周前的状态"**
@@ -189,7 +189,7 @@ cd __AGENT_DIR__ && git diff HEAD@{7.days.ago} HEAD --stat
 ```bash
 # 不要直接 git checkout！
 # 先展示历史：
-cd __AGENT_DIR__ && git log --oneline --since="7 days ago"
+cd ~/__AGENT_DIR__ && git log --oneline --since="7 days ago"
 # 然后走三步恢复法，由用户选择要恢复的内容
 ```
 
@@ -235,12 +235,12 @@ npx agentcfg init
 
 **排查：**
 ```bash
-cd __AGENT_DIR__ && git status --short
+cd ~/__AGENT_DIR__ && git status --short
 ```
 
 如果输出显示有文件未被追踪：
 ```bash
-cd __AGENT_DIR__ && git add . && git commit -m "manual: 手动归档未追踪文件"
+cd ~/__AGENT_DIR__ && git add . && git commit -m "manual: 手动归档未追踪文件"
 ```
 
 如果 status 输出为空但 log 也无内容，说明仓库是全新的，
