@@ -164,5 +164,40 @@ runTest('成功压缩', (tmpDir) => {
   assert(content === 'recent commit B', '文件内容应为最新 "recent commit B"');
 });
 
+// ─── 测试 5: 全部 commit 都超过阈值 ─────────────────────────
+
+runTest('全部 commit 都超阈值时仅压缩为一个 archive', (tmpDir) => {
+  const repoDir = initRepo(tmpDir);
+
+  // 建 3 个旧 commit（全部超过 90 天阈值）
+  makeOldCommit(repoDir, 'old 1', daysAgoStr(105));
+  makeOldCommit(repoDir, 'old 2', daysAgoStr(100));
+  makeOldCommit(repoDir, 'old 3', daysAgoStr(95));
+
+  const beforeCount = countCommits(repoDir);
+  assert(beforeCount === 3, `压缩前应有 3 个 commit（实际 ${beforeCount}）`);
+
+  const result = squashOldHistory({ cwd: repoDir, daysThreshold: 90 });
+  assert(result.squashed === true, 'squashed 应为 true');
+  assert(result.message.includes('已压缩'), '消息应包含"已压缩"');
+
+  // 验证压缩后：archive commit + 可能的初始 = 1 或 2
+  const afterCount = countCommits(repoDir);
+  // 根 commit 没有父节点时只有一个 archive commit
+  assert(afterCount >= 1, `压缩后应有至少 1 个 commit（实际 ${afterCount}）`);
+
+  // 验证最新 commit 是 archive 消息
+  const allMsgs = execFileSync('git', ['log', '--format=%s', '--reverse'], {
+    cwd: repoDir, encoding: 'utf-8',
+  }).trim().split('\n');
+  assert(allMsgs[allMsgs.length - 1].startsWith('archive:'), '最新 commit 应以 "archive:" 开头');
+
+  // 验证工作目录文件存在
+  const content = execFileSync('git', ['show', 'HEAD:file.txt'], {
+    cwd: repoDir, encoding: 'utf-8',
+  }).trim();
+  assert(content.length > 0, '文件内容不应为空');
+});
+
 console.log(`\n结果: ${passed} 通过, ${failed} 失败`);
 process.exit(failed > 0 ? 1 : 0);

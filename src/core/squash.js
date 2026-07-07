@@ -53,6 +53,14 @@ export function squashOldHistory({ cwd, daysThreshold = 90 }) {
         execFileSync('git', ['update-ref', '-d', 'HEAD'], { cwd });
         execFileSync('git', ['add', '.'], { cwd });
       }
+
+      // 创建 archive commit
+      execFileSync('git', [
+        '-c', 'user.name=agentcfg',
+        '-c', 'user.email=agentcfg@local',
+        'commit', '--no-verify', '--no-gpg-sign', '-m',
+        `archive: 自动压缩于 ${cutoffStr}（合并 ${oldCommits.length} 个 commit）`],
+      { cwd, encoding: 'utf-8', env: { ...process.env, GIT_COMMITTER_DATE: new Date().toISOString() } });
     } else {
       // 有近期 commit 需保留：仅压缩旧 commit，将近期 commit rebase 到 archive 之上
       // 先获取当前分支名，避免切分支后丢失

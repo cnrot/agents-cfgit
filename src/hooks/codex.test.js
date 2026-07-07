@@ -112,5 +112,18 @@ runTest('creates config.toml when it does not exist', (tmpDir) => {
   assert(config.includes('hooks = true'), 'config.toml 应包含 hooks = true');
 });
 
+// Test 6: 已有 hooks = false 时能正确切换为 true
+runTest('toggles hooks = false to hooks = true', (tmpDir) => {
+  const configPath = join(tmpDir, 'config.toml');
+  writeFileSync(configPath, '# existing config\n[features]\nhooks = false\nother = true', 'utf-8');
+
+  installCodexHooks(tmpDir, '/usr/bin/commit.js');
+
+  const config = readFileSync(configPath, 'utf-8');
+  assert(config.includes('hooks = true'), 'hooks 应已切换为 true');
+  assert(!config.includes('hooks = false'), '不应再包含 hooks = false');
+  assert(config.includes('other = true'), '其他配置应保留');
+});
+
 console.log(`\nResult: ${passed} passed, ${failed} failed`);
 process.exit(failed > 0 ? 1 : 0);
