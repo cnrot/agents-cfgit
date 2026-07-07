@@ -1,0 +1,100 @@
+/**
+ * commit.js 测试
+ * 用临时目录模拟真实场景验证自动提交逻辑
+ */
+import { mkdtempSync, writeFileSync, rmSync, mkdirSync } from 'fs';
+import { join } from 'path';
+import { tmpdir } from 'os';
+import { execFileSync } from 'child_process';
+import { commit } from './commit.js';
+
+let passed = 0;
+let failed = 0;
+
+function assert(condition, label) {
+  if (condition) {
+    passed++;
+    console.log(`  ✅ ${label}`);
+  } else {
+    failed++;
+    console.log(`  ❌ ${label}`);
+  }
+}
+
+function runTest(name, fn) {
+  console.log(`\n测试: ${name}`);
+  const tmpDir = mkdtempSync(join(tmpdir(), 'cm-test-'));
+  try {
+    fn(tmpDir);
+  } finally {
+    rmSync(tmpDir, { recursive: true, force: true });
+  }
+}
+
+// 测试1: 有变更时能正确提交
+runTest('有变更时提交成功', (tmpDir) => {
+  const repoDir = join(tmpDir, 'repo');
+  mkdirSync(repoDir, { recursive: true });
+  execFileSync('git', ['init'], { cwd: repoDir });
+  writeFileSync(join(repoDir, 'test.txt'), 'initial');
+  execFileSync('git', ['add', '.'], { cwd: repoDir });
+  execFileSync('git', ['commit', '-m', 'init'], { cwd: repoDir });
+
+  writeFileSync(join(repoDir, 'test.txt'), 'modified');
+  const result = commit({ cwd: repoDir, source: 'pre_tool', toolName: 'Bash' });
+
+  assert(result.committed === true, 'committed 应为 true');
+  assert(result.message.includes('snapshot before Bash'), '消息应包含工具名');
+  const status = execFileSync('git', ['status', '--porcelain'], { cwd: repoDir, encoding: 'utf-8' }).trim();
+  assert(status === '', '提交后工作区应干净');
+});
+
+// 测试2: 无变更时跳过
+runTest('无变更时跳过', (tmpDir) => {
+  const repoDir = join(tmpDir, 'repo');
+  mkdirSync(repoDir, { recursive: true });
+  execFileSync('git', ['init'], { cwd: repoDir });
+  writeFileSync(join(repoDir, 'test.txt'), 'initial');
+  execFileSync('git', ['add', '.'], { cwd: repoDir });
+  execFileSync('git', ['commit', '-m', 'init'], { cwd: repoDir });
+
+  const result = commit({ cwd: repoDir, source: 'pre_tool', toolName: 'Bash' });
+  assert(result.committed === false, 'committed 应为 false');
+  assert(result.message.includes('跳过'), '消息应包含"跳过"');
+});
+
+// 测试3: 无 .git 目录时跳过
+runTest('无 git 仓库时跳过', (tmpDir) => {
+  const result = commit({ cwd: tmpDir, source: 'pre_tool', toolName: 'Bash' });
+  assert(result.committed === false, 'committed 应为 false');
+  assert(result.message.includes('不是 git 仓库'), '应提示不是 git 仓库');
+});
+
+// 测试4: 目录不存在时跳过
+runTest('目录不存在时跳过', (tmpDir) => {
+  const result = commit({ cwd: join(tmpDir, 'nonexistent'), source: 'pre_tool', toolName: 'Bash' });
+  assert(result.committed === false, 'committed 应为 false');
+  assert(result.message.includes('不存在'), '应提示目录不存在');
+});
+
+// 测试5: 验证 git 操作失败时不会抛出异常
+runTest('git 操作失败时不会抛出异常', (tmpDir) => {
+  const repoDir = join(tmpDir, 'repo');
+  mkdirSync(repoDir, { recursive: true });
+  execFileSync('git', ['init'], { cwd: repoDir });
+  writeFileSync(join(repoDir, 'test.txt'), 'data');
+  // 调用 commit，无论是否有全局 user 配置，都不应抛出异常
+  let threw = false;
+  try {
+    const result = commit({ cwd: repoDir, source: 'test', toolName: 'Test' });
+    // 只要有返回就行（committed 可能是 true 或 false）
+    assert(typeof result.committed === 'boolean', '应返回 committed 布尔值');
+    assert(typeof result.message === 'string', '应返回 message 字符串');
+  } catch (e) {
+    threw = true;
+  }
+  assert(threw === false, '不应抛出异常');
+});
+
+console.log(`\n结果: ${passed} 通过, ${failed} 失败`);
+process.exit(failed > 0 ? 1 : 0);
