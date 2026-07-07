@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "__COMMIT_SCRIPT__ --source pre_tool",
+            "command": "__COMMIT_SCRIPT__ --source pre_tool --tool Bash",
             "statusMessage": "agentcfg: snapshotting"
           }
         ]

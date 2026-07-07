@@ -8,8 +8,9 @@ import { detectAgents } from './install.js';
 /**
  * 恢复入口（对话式交互，输出恢复指引给 LLM/Skill 使用）
  * @param {string} [targetFile] - 可选：要恢复的文件路径
+ * @param {string} [commitHash] - 可选：要查看差异的 commit hash
  */
-export default async function recover(targetFile) {
+export default async function recover(targetFile, commitHash) {
   const agents = detectAgents();
   if (agents.length === 0) {
     console.log('❌ 未检测到支持的 AI 工具，请先执行 agentcfg init');
@@ -21,6 +22,12 @@ export default async function recover(targetFile) {
   if (!existsSync(join(gitDir, '.git'))) {
     console.log(`❌ ${gitDir} 目录未初始化 git 仓库`);
     console.log('   请先执行 agentcfg init');
+    return;
+  }
+
+  if (targetFile && commitHash) {
+    // 生成三段式比对报告
+    console.log(generateDiffReport({ cwd: gitDir, hash: commitHash, filePath: targetFile }));
     return;
   }
 

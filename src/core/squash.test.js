@@ -144,16 +144,18 @@ runTest('成功压缩', (tmpDir) => {
   assert(result.message.includes('已压缩'), '消息应包含"已压缩"');
   assert(result.message.includes('3'), '消息应包含旧 commit 数量 3');
 
-  // 验证压缩后 commit 数：base + archive = 2（所有旧 + 新 commit 被 squash 为一个 archive）
+  // 验证压缩后 commit 数：base + archive + 2 个近期 commit = 4
   const afterCount = countCommits(repoDir);
-  assert(afterCount === 2, `压缩后应有 2 个 commit（实际 ${afterCount}）`);
+  assert(afterCount === 4, `压缩后应有 4 个 commit（实际 ${afterCount}）`);
 
-  // 验证最新的（唯一一个非 base）消息是 archive 消息
+  // 验证 commit 顺序：base init → archive → recent A → recent B
   const allMsgs = execFileSync('git', ['log', '--format=%s', '--reverse'], {
     cwd: repoDir, encoding: 'utf-8',
   }).trim().split('\n');
   assert(allMsgs[0] === 'base init', '第一个 commit 应为 "base init"');
   assert(allMsgs[1].startsWith('archive:'), '第二个 commit 应以 "archive:" 开头');
+  assert(allMsgs[2] === 'recent commit A', '第三个 commit 应为 "recent commit A"');
+  assert(allMsgs[3] === 'recent commit B', '第四个 commit 应为 "recent commit B"');
 
   // 验证工作目录文件仍然存在
   const content = execFileSync('git', ['show', 'HEAD:file.txt'], {

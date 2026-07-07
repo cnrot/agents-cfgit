@@ -200,11 +200,11 @@ cd __AGENT_DIR__ && git log --oneline --since="7 days ago"
 当用户问"备份正常吗"时：
 
 ```bash
-cd ~/.claude && git status --short
+cd ~/__AGENT_DIR__ && git status --short
 # 如果输出为空，说明所有文件已归档，状态正常
 # 如果有输出，说明有未提交的变更
 
-cd ~/.claude && git log --oneline -1
+cd ~/__AGENT_DIR__ && git log --oneline -1
 # 查看最后一次备份时间
 ```
 

@@ -13,7 +13,7 @@ const commands = {
   },
   recover: async () => {
     const { default: recover } = await import('../src/recover.js');
-    await recover(args[0]);
+    await recover(args[0], args[1]);
   },
 };
 

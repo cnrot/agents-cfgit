@@ -18,7 +18,7 @@ export default async function uninstall() {
 
   for (const agent of agents) {
     if (existsSync(agent.dir)) {
-      const result = await agent.fn(agent.dir);
+      const result = agent.fn(agent.dir);
       console.log(`  ${agent.name}: ${result.message}`);
     }
     // 移除 SKILL.md
@@ -32,12 +32,12 @@ export default async function uninstall() {
   // OpenCode is project-local, not in home directory
   const opencodeDir = join(process.cwd(), '.opencode');
   if (existsSync(opencodeDir)) {
-    const result = await uninstallOpencodeHooks(opencodeDir);
+    const result = uninstallOpencodeHooks(opencodeDir);
     console.log(`  OpenCode: ${result.message}`);
   }
 
-  console.log('\nWarning: .git repos in agent directories are NOT removed automatically.');
-  console.log('  If you want to remove them, run:');
+  console.log('\n⚠️  是否删除 .git 仓库？这会永久丢失所有备份历史！');
+  console.log('   如需删除，请手动执行:');
   console.log('    trash ~/.claude/.git');
   console.log('    trash ~/.cursor/.git');
   console.log('    trash ~/.codex/.git');

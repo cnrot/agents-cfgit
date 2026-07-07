@@ -28,7 +28,7 @@ export function commit({ cwd, source = 'hook', toolName = 'unknown' }) {
     // gitignore 排除的文件不会出现在 status 输出中
     execFileSync('git', ['add', '.'], { cwd, encoding: 'utf-8' });
     const timestamp = new Date().toISOString().replace('T', ' ').slice(0, 19);
-    const message = `auto: snapshot before ${toolName} at ${timestamp}`;
+    const message = `auto: [${source}] snapshot before ${toolName} at ${timestamp}`;
     execFileSync('git', [
       '-c', 'user.name=agentcfg',
       '-c', 'user.email=agentcfg@local',
@@ -42,4 +42,18 @@ export function commit({ cwd, source = 'hook', toolName = 'unknown' }) {
   } catch (err) {
     return { committed: false, message: `git 操作失败: ${err.message}` };
   }
+}
+
+// CLI 入口：当被 hooks 直接调用时解析 argv 并执行
+if (process.argv[1]?.endsWith('commit.js')) {
+  const cwd = process.cwd();
+  let source = 'hook';
+  let toolName = 'unknown';
+  for (let i = 2; i < process.argv.length; i++) {
+    if (process.argv[i] === '--source') source = process.argv[++i] || source;
+    if (process.argv[i] === '--tool') toolName = process.argv[++i] || toolName;
+  }
+  const result = commit({ cwd, source, toolName });
+  console.log(result.message);
+  process.exit(0);
 }
