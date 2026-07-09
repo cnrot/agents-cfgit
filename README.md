@@ -75,7 +75,12 @@ agentcfg/
 agentcfg uninstall
 ```
 
-如需删除 .git 仓库，手动执行：
+如需删除 .git 仓库：
+
 ```bash
+# 跨平台（需要 trash-cli）
 trash ~/.claude/.git
+
+# Windows 原生
+Remove-Item -Recurse -Force ~/.claude/.git
 ```

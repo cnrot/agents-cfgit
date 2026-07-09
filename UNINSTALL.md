@@ -72,10 +72,19 @@ trash "$(npm root -g)/../bin/agentcfg.ps1"
 删除 `.opencode/plugins/agentcfg.ts`。
 
 ### Git 仓库
+
+> `trash` 命令在 Windows / macOS / Linux 都支持（Windows 通过 npm 全局安装）。如果尚未安装：
+> - macOS: `brew install trash`
+> - Windows / Linux: `npm install -g trash-cli`
+
 ```bash
+# 跨平台（需要 trash-cli）
 trash ~/.claude/.git
 trash ~/.cursor/.git
 trash ~/.codex/.git
+
+# Windows 原生（不用 trash）—— 移入回收站
+Remove-Item -Recurse -Force ~/.claude/.git
 ```
 
 ## 备份恢复
