@@ -336,3 +336,37 @@ agentcfg squash --days 30 # 自定义阈值
 - **如果修改了 settings.json 导致 hooks 不生效**，重新执行 `agentcfg init`
 - **如需长期保留关键版本**，告知 LLM 对某个 commit 打 tag
 - 系统按设计每月 1-3 号自动压缩 90 天前的 commit（详见 `agentcfg squash`）
+
+---
+
+## 7. 架构说明（给高级用户）
+
+### 7.1 为什么 agentcfg 不打包成 plugin？
+
+调研发现各 AI 工具的 hook 挂载机制不一致：
+
+| 工具 | Plugin/Marketplace 机制 | Hook 声明位置 |
+|------|-------------------------|---------------|
+| Claude Code | ✅ 有 `extraKnownMarketplaces` + `enabledPlugins` | plugin.json 内 `hooks` 字段（[官方文档](https://code.claude.com/docs/en/plugins-reference)） |
+| Cursor | ❌ 无 marketplace 概念 | 仅 `.cursor/hooks.json` |
+| Codex CLI | ⚠️ 已知 bug：plugin manifest 定义的 hooks 不被加载（[issue #16430](https://github.com/openai/codex/issues/16430)） | 仅 `~/.codex/hooks.json` |
+| OpenCode | ✅ 有 plugin 系统 | `.opencode/plugins/*.ts` |
+
+4 个 agent 中只有 1 个支持 plugin 声明 hook（Claude Code），其他 3 个必须直接写 hook 配置文件。**为了跨 agent 一致性，agentcfg 选择统一的"硬编码 + 增量卸载"方案**，卸载时通过 `enabledPlugins.xxx = false` 等效操作清理。
+
+如未来 Claude Code plugin 机制更成熟，可考虑为 Claude 单独提供 plugin 打包方式。
+
+### 7.2 卸载为什么不是"配置项开关"？
+
+理论上 Claude Code 的 `enabledPlugins: { "agentcfg@xxx": false }` 即可禁用。但：
+- Cursor / Codex / OpenCode 都没有"插件开关"机制
+- 即使 Claude 用了 plugin 机制，其他 3 个仍需"硬卸载"
+- 当前 `agentcfg uninstall` 已实现"一个命令卸载所有"，对用户体验无差异
+
+### 7.3 为什么无法自动验证"AI 工具内部缓存"？
+
+AI 工具（Claude Code / Cursor 等）启动时会缓存已注册的 hook、skill、plugin 列表。卸载配置文件后，**必须重启 AI 工具会话** 才能清空缓存。
+- Claude Code 无 CLI 暴露"列出当前已注册 hook/skill"
+- `agentcfg verify` 只能检查**文件层面**状态，无法检查**进程内缓存**状态
+
+这是 AI 工具的设计限制，agentcfg 无法绕过。请始终遵循 `UNINSTALL.md` 中的"重启 AI 工具会话"步骤。

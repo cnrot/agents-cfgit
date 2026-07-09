@@ -71,7 +71,7 @@ runTest('uninstall prefers incremental stripping over backup', (tmpDir) => {
   installClaudeHooks(tmpDir, '/usr/bin/commit.js');
   const result = uninstallClaudeHooks(tmpDir);
   assert(result.uninstalled === true, 'uninstalled 应为 true');
-  assert(result.message === 'agentcfg hooks 已移除', '消息应提示增量移除');
+  assert(result.message.includes('agentcfg hooks 已移除'), '消息应提示增量移除');
 
   // 备份文件应保留（不用于恢复，避免丢掉其他工具的 hooks）
   const backupPath = join(tmpDir, 'settings.json.bak.agentcfg');
@@ -104,7 +104,7 @@ runTest('uninstall removes hooks without backup', (tmpDir) => {
   writeFileSync(join(tmpDir, 'settings.json'), JSON.stringify(settings, null, 2) + '\n', 'utf-8');
   const result = uninstallClaudeHooks(tmpDir);
   assert(result.uninstalled === true, 'uninstalled 应为 true');
-  assert(result.message === 'agentcfg hooks 已移除', '消息应提示已移除');
+  assert(result.message.includes('agentcfg hooks 已移除'), '消息应提示已移除');
 
   const raw = readFileSync(join(tmpDir, 'settings.json'), 'utf-8');
   const parsed = JSON.parse(raw);

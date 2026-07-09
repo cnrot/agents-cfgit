@@ -36,7 +36,31 @@ const commands = {
     }
   },
   verify: async () => {
-    const { verifyAll } = await import('../src/verify.js');
+    const { verifyAll, previewUninstall } = await import('../src/verify.js');
+    const isUninstallDryRun = args.includes('--uninstall');
+
+    if (isUninstallDryRun) {
+      const { agents, actions } = previewUninstall();
+      if (agents.length === 0) {
+        console.log('❌ 未检测到支持的 AI 工具，无需卸载');
+        return;
+      }
+      console.log('🔍 卸载预览（dry-run，不会实际修改任何文件）\n');
+      for (const a of actions) {
+        console.log(`${a.agent.type} (${a.agent.dir}):`);
+        if (a.dirActions.length === 0) {
+          console.log('  (无操作 — 该 agent 未安装 agentcfg)');
+        } else {
+          for (const act of a.dirActions) {
+            console.log(`  • ${act}`);
+          }
+        }
+      }
+      console.log('\n💡 确认无误后运行 `agentcfg uninstall` 实际执行');
+      console.log('⚠️  Claude Code/Cursor 用户需重启 AI 工具会话使卸载生效');
+      return;
+    }
+
     const { results, allOk } = verifyAll();
     if (results.length === 0) {
       console.log('❌ 未检测到支持的 AI 工具，请先执行 agentcfg init');
@@ -138,7 +162,7 @@ if (commands[command]) {
   console.log('  uninstall                  卸载 agentcfg');
   console.log('  recover                    查看历史或恢复配置（对话式引导）');
   console.log('  squash [--days N]          压缩 N 天前的历史（默认 90 天）');
-  console.log('  verify                     一键验证所有 agent 安装完整性');
+  console.log('  verify [--uninstall]     一键验证；加 --uninstall 预览卸载影响');
   console.log('  log [<file>] [--count N]   查看历史（默认最近 10 条）');
   console.log('  diff <file> <commit-hash>  生成三段式比对报告');
   console.log('  status                     查看各 agent 工作区状态');

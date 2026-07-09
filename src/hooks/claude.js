@@ -45,14 +45,49 @@ export function uninstallClaudeHooks(claudeDir) {
   // 这样能保留其他工具注册的 hooks（MCP 等），避免"恢复备份"一刀切
   try {
     const settings = JSON.parse(readFileSync(settingsPath, 'utf-8'));
+    let modified = false;
+
+    // 1. 移除 hooks.PreToolUse 中的 agentcfg 条目
     if (settings.hooks?.PreToolUse) {
+      const before = settings.hooks.PreToolUse.length;
       settings.hooks.PreToolUse = settings.hooks.PreToolUse.filter(h =>
         !h.hooks?.some(hk => hk.command?.includes('commit.js'))
       );
+      if (settings.hooks.PreToolUse.length !== before) modified = true;
       if (settings.hooks.PreToolUse.length === 0) delete settings.hooks.PreToolUse;
       if (Object.keys(settings.hooks).length === 0) delete settings.hooks;
+    }
+
+    // 2. 移除 enabledPlugins 中所有 key 含 "agentcfg" 的条目
+    if (settings.enabledPlugins && typeof settings.enabledPlugins === 'object') {
+      const before = Object.keys(settings.enabledPlugins).length;
+      for (const key of Object.keys(settings.enabledPlugins)) {
+        if (key.toLowerCase().includes('agentcfg')) {
+          delete settings.enabledPlugins[key];
+        }
+      }
+      if (Object.keys(settings.enabledPlugins).length === 0) {
+        delete settings.enabledPlugins;
+      }
+      if (Object.keys(settings.enabledPlugins || {}).length !== before) modified = true;
+    }
+
+    // 3. 移除 extraKnownMarketplaces 中含 "agentcfg" 的源
+    if (Array.isArray(settings.extraKnownMarketplaces)) {
+      const before = settings.extraKnownMarketplaces.length;
+      settings.extraKnownMarketplaces = settings.extraKnownMarketplaces.filter(m => {
+        const source = typeof m === 'string' ? m : (m?.source || '');
+        return !source.toLowerCase().includes('agentcfg');
+      });
+      if (settings.extraKnownMarketplaces.length === 0) {
+        delete settings.extraKnownMarketplaces;
+      }
+      if ((settings.extraKnownMarketplaces || []).length !== before) modified = true;
+    }
+
+    if (modified) {
       writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + '\n', 'utf-8');
-      return { uninstalled: true, message: 'agentcfg hooks 已移除' };
+      return { uninstalled: true, message: 'agentcfg hooks 已移除（含 enabledPlugins / extraKnownMarketplaces 清理）' };
     }
     return { uninstalled: true, message: 'agentcfg hooks 未找到，无需卸载' };
   } catch {

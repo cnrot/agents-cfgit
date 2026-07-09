@@ -131,3 +131,95 @@ export function verifyAll() {
   const allOk = results.length > 0 && results.every(r => r.checks.every(c => c.ok));
   return { agents, results, allOk };
 }
+
+/**
+ * 模拟卸载：列出每个 agent 将被清理的文件/配置项（不实际修改）
+ * @returns {{ agents: Array, actions: Array }}
+ */
+export function previewUninstall() {
+  const agents = detectAgents();
+  const actions = [];
+
+  for (const agent of agents) {
+    const dir = agent.dir;
+    const dirActions = [];
+
+    // 检查 hook 注册情况
+    const hookCheck = checkHookRegistration(agent.type, dir);
+    if (hookCheck.ok) {
+      dirActions.push(`从 ${agent.type} 配置中移除 agentcfg hook`);
+    }
+
+    // 检查 enabledPlugins（仅 claude）
+    if (agent.type === 'claude') {
+      const settingsPath = join(dir, 'settings.json');
+      if (existsSync(settingsPath)) {
+        try {
+          const settings = JSON.parse(readFileSync(settingsPath, 'utf-8'));
+          if (settings.enabledPlugins && Object.keys(settings.enabledPlugins).length > 0) {
+            const matched = Object.keys(settings.enabledPlugins).filter(k =>
+              k.toLowerCase().includes('agentcfg')
+            );
+            if (matched.length > 0) {
+              dirActions.push(`从 enabledPlugins 移除: ${matched.join(', ')}`);
+            }
+          }
+        } catch { /* 损坏 JSON，跳过 */ }
+      }
+    }
+
+    // Codex 还原 config.toml hooks 值
+    if (agent.type === 'codex') {
+      const metaPath = join(dir, 'config.toml.agentcfg-meta');
+      if (existsSync(metaPath)) {
+        try {
+          const meta = JSON.parse(readFileSync(metaPath, 'utf-8'));
+          if (meta.originalHooksValue === null) {
+            dirActions.push('从 config.toml 移除 agentcfg 添加的 [features] 段');
+          } else {
+            dirActions.push(`还原 config.toml hooks = ${meta.originalHooksValue}`);
+          }
+          dirActions.push('删除元数据文件 config.toml.agentcfg-meta');
+        } catch { /* */ }
+      }
+    }
+
+    // SKILL.md
+    const skillPath = join(dir, 'skills/agentcfg/SKILL.md');
+    if (existsSync(skillPath)) {
+      dirActions.push(`删除 ${skillPath}`);
+    }
+
+    // 备份文件保留
+    const backupFiles = [];
+    const candidates = [
+      'settings.json.bak.agentcfg',
+      'hooks.json.bak.agentcfg',
+      'config.toml.bak.agentcfg',
+    ];
+    for (const name of candidates) {
+      if (existsSync(join(dir, name))) backupFiles.push(name);
+    }
+    if (backupFiles.length > 0) {
+      dirActions.push(`保留备份文件: ${backupFiles.join(', ')}（不会自动删除）`);
+    }
+
+    // .git 目录
+    if (existsSync(join(dir, '.git'))) {
+      dirActions.push(`保留 .git 目录（不主动删除，含所有备份历史）`);
+    }
+
+    // OpenCode plugin
+    if (agent.type === 'opencode') {
+      const pluginPath = join(dir, 'plugins/agentcfg.ts');
+      if (existsSync(pluginPath)) {
+        dirActions.push(`删除 OpenCode 插件文件 ${pluginPath}`);
+      }
+    }
+
+    actions.push({ agent, dirActions });
+  }
+
+  return { agents, actions };
+}
+
