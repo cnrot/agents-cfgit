@@ -106,6 +106,34 @@ cd ~/__AGENT_DIR__ && git show <commit-hash>:CLAUDE.md
 > 2. 禁止使用 `cp` 覆盖整文件
 > 3. 即使文件被删除，也先查 `git log` 确认是否存在过
 
+> **重要：`agentcfg recover` 是只读操作**
+> - `recover` **只生成报告**（三段式 diff / 历史列表），**不会写入任何文件**
+> - 实际恢复必须由 LLM 用 Edit 工具精确写入（不覆盖整文件）
+> - 所有恢复路径天然 dry-run，无需 `--dry-run` 标志
+> - 这意味着误调 `recover` 不会损坏配置——它只是查询
+
+### 3.0 一键验证安装
+
+当用户问"备份正常吗"或"agentcfg 可用吗"时，**优先用 `agentcfg verify` 一键检查**：
+
+```bash
+agentcfg verify
+```
+
+输出格式：
+```
+claude (C:\Users\xxx\.claude):
+  ✅ claude: .git 仓库 — C:\Users\xxx\.claude\.git
+  ✅ claude: .gitignore — C:\Users\xxx\.claude\.gitignore
+  ✅ claude: 至少 1 个 commit — 5 个 commit（最新: auto: [pre_tool] snapshot before Bash...）
+  ✅ claude: hook 注册 — 已注册
+  ✅ claude: SKILL.md — C:\Users\xxx\.claude\skills\agentcfg\SKILL.md
+
+✅ 全部检查通过
+```
+
+任何 ❌ 都提示用户重新执行 `agentcfg init` 或查看 5.3 节故障排查。
+
 ### 3.1 三步恢复法
 
 当用户说"帮我恢复"时，按以下步骤执行：

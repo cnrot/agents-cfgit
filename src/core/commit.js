@@ -1,6 +1,7 @@
 import { execFileSync } from 'child_process';
 import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
+import { pathToFileURL } from 'url';
 
 /**
  * 在目标目录检测未提交变更并自动提交
@@ -54,7 +55,9 @@ export function commit({ cwd, source = 'hook', toolName = 'unknown' }) {
 }
 
 // CLI 入口：当被 hooks 直接调用时解析 argv 并执行
-if (process.argv[1]?.endsWith('commit.js')) {
+// 用 import.meta.url 与 process.argv[1] 比较（兼容符号链接、Windows 路径变体）
+const argvFile = process.argv[1] ? pathToFileURL(process.argv[1]).href : '';
+if (argvFile && argvFile === import.meta.url) {
   const cwd = process.cwd();
   let source = 'hook';
   let toolName = 'unknown';

@@ -8,10 +8,18 @@ const TEMPLATE_DIR = join(__dirname, '../../templates');
 
 export function initGit(cwd) {
   if (existsSync(join(cwd, '.git'))) {
-    return { initialized: false, skipped: true, message: 'git 仓库已存在' };
+    // 已存在 .git 时，检查是否有 commit；没有则继续执行首次提交
+    try {
+      execFileSync('git', ['rev-parse', 'HEAD'], { cwd, stdio: 'ignore' });
+      return { initialized: false, skipped: true, message: 'git 仓库已存在' };
+    } catch {
+      // .git 存在但无 commit，继续走首次提交流程
+    }
   }
   try {
-    execFileSync('git', ['init'], { cwd });
+    if (!existsSync(join(cwd, '.git'))) {
+      execFileSync('git', ['init'], { cwd });
+    }
     const gitignoreSrc = join(TEMPLATE_DIR, 'gitignore');
     if (existsSync(gitignoreSrc)) {
       const content = readFileSync(gitignoreSrc, 'utf-8');
