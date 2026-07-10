@@ -18,10 +18,8 @@ export const ConfigMgrPlugin: Plugin = async (ctx) => {
       await ctx.$`cd ${safeDir} && git add . && git diff --cached --quiet || git commit -m "auto: snapshot before ${safeTool}"`;
     },
     "file.edited": async ({ filePath }) => {
-      if (filePath.includes(".opencode")) {
-        const safeFile = shellQuote(filePath);
-        await ctx.$`cd ${safeDir} && git add . && git diff --cached --quiet || git commit -m "auto: snapshot after edit ${safeFile}"`;
-      }
+      const safeFile = shellQuote(filePath);
+      await ctx.$`cd ${safeDir} && git add . && git diff --cached --quiet || git commit -m "auto: snapshot after edit ${safeFile}"`;
     },
   };
 };
