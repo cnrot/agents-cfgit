@@ -6,12 +6,18 @@ export function squashOldHistory({ cwd, daysThreshold = 90 }) {
   if (!existsSync(join(cwd, '.git'))) {
     return { squashed: false, message: '不是 git 仓库' };
   }
+  // 早期检测：unborn HEAD（空仓库，无 commit 时）
+  try {
+    execFileSync('git', ['rev-parse', 'HEAD'], { cwd, encoding: 'utf-8' });
+  } catch {
+    return { squashed: false, message: '空仓库或 detached HEAD：尚无 commit 可压缩' };
+  }
   // 检查工作区是否干净，避免数据丢失
   const status = execFileSync('git', ['status', '--porcelain'], {
     cwd, encoding: 'utf-8',
   }).trim();
   if (status) {
-    return { squashed: false, message: '工作目录有未提交变更，跳过压缩' };
+    return { squashed: false, message: '工作目录有未提交变更，跳过压缩（使用 --force 自动暂存）' };
   }
   const cutoff = new Date(Date.now() - daysThreshold * 24 * 60 * 60 * 1000);
   const cutoffStr = cutoff.toISOString().replace('T', ' ').slice(0, 19);
@@ -47,6 +53,16 @@ export function squashOldHistory({ cwd, daysThreshold = 90 }) {
     if (newestOldHash === currentHead) {
       // 所有 commit 都超过阈值，压缩全部历史
       // 创建备份分支（catch 回滚时用）
+      // 如果已存在 backup-before-squash 分支，先将其重命名保留
+      try {
+        execFileSync('git', ['rev-parse', '--verify', 'backup-before-squash'], {
+          cwd, encoding: 'utf-8',
+        });
+        const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+        execFileSync('git', ['branch', '-m', 'backup-before-squash', `backup-before-squash.${ts}`], {
+          cwd,
+        });
+      } catch { /* 不存在旧 backup 分支 */ }
       execFileSync('git', ['branch', '-f', 'backup-before-squash', 'HEAD'], { cwd });
       let parentExists = false;
       try {
@@ -79,7 +95,18 @@ export function squashOldHistory({ cwd, daysThreshold = 90 }) {
       // branchName 已在 try 开头获取，此处无需重复
 
       // Step 0: 创建备份分支（rebase 失败时恢复用）
-      execFileSync('git', ['branch', '-f', 'backup-before-squash'], { cwd });
+      // 如果已存在 backup-before-squash 分支，先将其重命名保留
+      try {
+        execFileSync('git', ['rev-parse', '--verify', 'backup-before-squash'], {
+          cwd, encoding: 'utf-8',
+        });
+        // 旧 backup 分支存在，重命名保留
+        const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+        execFileSync('git', ['branch', '-m', 'backup-before-squash', `backup-before-squash.${ts}`], {
+          cwd,
+        });
+      } catch { /* 不存在旧 backup 分支，正常创建 */ }
+      execFileSync('git', ['branch', '-f', 'backup-before-squash', 'HEAD'], { cwd });
 
       // Step 1: 在最新旧 commit 处创建临时分支
       execFileSync('git', ['branch', 'temp-squash', newestOldHash], { cwd });

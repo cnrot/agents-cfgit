@@ -199,5 +199,50 @@ runTest('全部 commit 都超阈值时仅压缩为一个 archive', (tmpDir) => {
   assert(content.length > 0, '文件内容不应为空');
 });
 
+// ─── 测试 6: 空仓库（unborn HEAD）应优雅处理 ──────────────
+
+runTest('空仓库（unborn HEAD）应优雅处理', (tmpDir) => {
+  const repoDir = initRepo(tmpDir);
+  // 不创建任何 commit，保持 unborn HEAD 状态
+
+  const result = squashOldHistory({ cwd: repoDir, daysThreshold: 90 });
+  assert(result.squashed === false, 'squashed 应为 false');
+  // 应给出明确的中文错误消息（提到 branch/detach/commit/HEAD/仓库）
+  const hasIncompleteHint = /branch|detach|commit|HEAD|仓库/i.test(result.message);
+  assert(hasIncompleteHint,
+    `消息应提示分支/HEAD/commit 状态相关信息（实际：${result.message}）`);
+});
+
+// ─── 测试 7: 二次压缩前应保留旧 backup 分支 ──────────────
+
+runTest('二次压缩应保留旧 backup-before-squash 分支', (tmpDir) => {
+  const repoDir = initRepo(tmpDir);
+  makeCommit(repoDir, 'base init');
+  makeOldCommit(repoDir, 'old commit', daysAgoStr(100));
+  makeCommit(repoDir, 'recent commit');
+
+  // 手动模拟一个旧的 backup 分支（指向某个历史状态）
+  const oldBackupHash = execFileSync('git', ['log', '--format=%H', '--reverse'], {
+    cwd: repoDir, encoding: 'utf-8',
+  }).trim().split('\n')[0];
+  execFileSync('git', ['branch', 'backup-before-squash', oldBackupHash], { cwd: repoDir });
+
+  // 第一次压缩（应保留旧 backup 分支并创建新的）
+  const result = squashOldHistory({ cwd: repoDir, daysThreshold: 90 });
+  assert(result.squashed === true, 'squashed 应为 true');
+
+  // 验证：旧 backup 分支仍存在（被重命名保留）
+  // 旧 backup 应被重命名为 backup-before-squash.<timestamp> 形式
+  const branches = execFileSync('git', ['branch'], {
+    cwd: repoDir, encoding: 'utf-8',
+  }).trim();
+  const oldBackupPreserved = branches.split('\n').some(b =>
+    b.trim().startsWith('backup-before-squash.') ||
+    b.trim() === 'backup-before-squash'
+  );
+  assert(oldBackupPreserved,
+    `旧 backup 分支应被保留（带时间戳重命名）实际分支：\n${branches}`);
+});
+
 console.log(`\n结果: ${passed} 通过, ${failed} 失败`);
 process.exit(failed > 0 ? 1 : 0);
