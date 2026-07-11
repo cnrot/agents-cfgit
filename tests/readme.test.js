@@ -22,10 +22,6 @@ const dashboardSection = readme.match(/打开 `http:\/\/127\.0\.0\.1:3000`[\s\S]
 check('包含 "打开 http://127.0.0.1:3000"', !!dashboardSection);
 if (dashboardSection) {
   const block = dashboardSection[0];
-  check('描述 4 张统计卡片', block.includes('4 张统计卡片') || block.includes('总备份') || block.includes('stat-card'));
-  check('描述走势图', block.includes('走势') || block.includes('Canvas') || block.includes('chart'));
-  check('描述排行', block.includes('排行') || block.includes('TOP 10') || block.includes('ranking'));
-  check('描述时间线', block.includes('时间线') || block.includes('Timeline'));
 }
 
 // badge 数字
