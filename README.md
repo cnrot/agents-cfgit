@@ -5,7 +5,7 @@
 [![npm version](https://img.shields.io/npm/v/agentcfg.svg)](https://www.npmjs.com/package/agentcfg)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Node >=18](https://img.shields.io/badge/node-%3E%3D18-brightgreen.svg)](package.json)
-[![Tests](https://img.shields.io/badge/tests-270%20passing-brightgreen.svg)](#testing)
+[![Tests](https://img.shields.io/badge/tests-221%20passing-brightgreen.svg)](#testing)
 
 你花几周打磨的 `CLAUDE.md`、`SKILL.md`、agent 配置、Cursor rules —— 这些是核心资产。一次误改、误删，几天心血归零。
 
@@ -106,12 +106,18 @@ agentcfg/
 │   │   ├── commit.js            hook 调用的 commit 入口
 │   │   ├── log.js               git log 解析
 │   │   ├── diff.js              三段式比对报告
-│   │   └── squash.js            90 天压缩（带 backup-before-squash 兜底）
+│   │   ├── squash.js            90 天压缩（带 backup-before-squash 兜底）
+│   │   ├── show.js              `git show` 解析为 per-file diff(给 WebUI 用)
+│   │   └── stats.js             聚合 dailyActivity / fileRanking(给 WebUI 用)
 │   ├── hooks/                   每个 agent 一个适配器
 │   │   ├── claude.js            ~/.claude/settings.json
 │   │   ├── cursor.js            ~/.cursor/hooks.json
 │   │   ├── codex.js             ~/.codex/{hooks.json,config.toml}
 │   │   └── opencode.js          .opencode/plugins/agentcfg.ts
+│   ├── ui/                      WebUI 仪表板(单文件 SPA + 独立主题)
+│   │   ├── index.html           唯一前端资产(无构建,内联 JS)
+│   │   ├── theme.css            独立 CSS 变量(双主题)
+│   │   └── server.js            Node 内置 http,3 个 GET API
 │   ├── install.js               安装编排
 │   ├── uninstall.js             卸载（含 .bak.agentcfg 清理）
 │   ├── recover.js               对话式恢复引导
@@ -181,6 +187,7 @@ agentcfg log [file]          # 查看历史（默认最近 10 条）
 agentcfg diff <file> <hash>  # 生成三段式比对报告
 agentcfg recover [file] [hash]  # 对话式恢复引导
 agentcfg squash [--days N] [--force]  # 压缩 N 天前的 commit（默认 90）
+agentcfg ui [--port 3000] [--host 127.0.0.1] [--open]  # 启动 WebUI 仪表板
 agentcfg uninstall           # 卸载
 ```
 
@@ -196,6 +203,24 @@ agentcfg uninstall           # 卸载
 - **增量卸载**：`claude.js` uninstall 用 `filter` 移除 agentcfg 条目而非 `cp` 覆盖整文件，用户的其他配置一字不动。
 - **90 天自动压缩**：默认按 tag 豁免 + 临时分支 + rebase `--onto` 合并过期 commit，带回滚分支。
 - **零外部依赖**：仅使用 Node 内置模块，npm 包体积小、安装快。
+- **WebUI 仪表板**:`agentcfg ui` 一行命令启动浏览器看备份历史(走势图 / 排行榜 / 时间线 / diff 高亮);Node 内置 `http` server,3 个 GET API + 静态 serve;零运行时依赖。
+
+## WebUI 仪表板(可选)
+
+```bash
+cd ~/.claude       # 或任意 agentcfg 已 init 的目录
+agentcfg ui        # 默认 127.0.0.1:3000
+agentcfg ui --port 8080 --open   # 自定义端口 + 自动开浏览器
+```
+
+打开 `http://127.0.0.1:3000` 看到**真实备份历史**:
+
+- 4 张统计卡片(总备份 / 追踪文件 / 首次 / 最近)+ sparkline 微走势
+- 走势 Canvas(日提交量 + 3 日均线),周/日切换,拖拽框选缩放
+- TOP 10 高频文件排行榜(点击跳到时间线搜索)
+- 时间线(分页 20 条/页、模糊搜索、Ctrl+点对比两个 commit、diff 高亮)
+- 双主题(浅/暗) + 中英双语 + 键盘快捷键(Ctrl+K 搜索、←/→ 翻页、Esc 失焦、R 重置)
+
 
 ## 对话式恢复（核心场景）
 
@@ -257,7 +282,7 @@ node src/hooks/claude.test.js
 ### 当前测试覆盖
 
 - `bin/agentcfg.test.js` — CLI 参数解析
-- `src/core/{commit,init,log,diff,squash}.test.js` — 核心 git 操作
+- `src/core/{commit,init,log,diff,squash,show,stats}.test.js` — 核心 git 操作
 - `src/hooks/{claude,cursor,codex,opencode}.test.js` — 各 agent hook 适配
 - `src/templates.test.js` — 模板完整性
 - `src/install.test.js` — 安装流程
