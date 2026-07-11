@@ -7,25 +7,34 @@
 [![Node >=18](https://img.shields.io/badge/node-%3E%3D18-brightgreen.svg)](package.json)
 [![Tests](https://img.shields.io/badge/tests-221%20passing-brightgreen.svg)](#testing)
 
-你花几周打磨的 `CLAUDE.md`、`SKILL.md`、agent 配置、Cursor rules —— 这些是核心资产。一次误改、误删，几天心血归零。
+你花几周打磨的 `CLAUDE.md`、`SKILL.md`、agent 配置这些是核心资产。如果出现误改、误删，几天心血归零。
 
 `agentcfg` 把这些配置变成 Git 仓库，每次修改前自动 `git commit` 留痕；恢复时通过对话让 AI 给你三段式比对报告，**精准合并，不暴力覆盖**。
 
-## 项目名称与定位
+## 项目介绍
 
 `agentcfg`是一个基于 Git 的版本控制，专门管理 AI 编程 Agent（Claude Code / Cursor / Codex CLI / OpenCode）的配置文件。每次配置文件被修改前，hooks 自动触发 `git commit` 创建快照；用户通过对话式 [`SKILL.md`](SKILL.md) AI agent 完成历史查看与三段式比对恢复。
 
 ## 为什么需要 agentcfg
 
-| 你需要的能力 | 手动 `git init` | agentcfg |
+| 对比 | 手动 `git init` | agentcfg |
 |---|---|---|
-| 自动备份（修改前 commit） | 写 hook | ✅ 内置 |
-| 每个 AI 目录各自独立仓库 | 手动建 + 维护 | ✅ 自动检测 |
-| 卸载时还原原始配置 | 自己记 / 备份 settings.json | ✅ 按原始值精确还原 |
+| 自动备份| 写 hook | ✅ 内置 |
+| 每个 Agent 目录各自独立仓库 | 手动建 + 维护 | ✅ 自动检测 |
+| 卸载时还原配置 | 自己记 / 备份 settings.json | ✅ 按原始值精确还原 |
 | 损坏的 settings.json | 手动修 | ✅ 校验 + 保护后续编辑 |
 | 90 天前的 commit 自动压缩 | 写脚本 | ✅ `agentcfg squash` |
-| 跨平台（Win/macOS/Linux） | 各写一份 | ✅ `execFileSync` 防注入 |
+| 跨平台（Win/Linux） | 各写一份 | ✅ `execFileSync` 防注入 |
 | AI 帮你恢复 | 自己读 git log | ✅ `SKILL.md` 引导对话式恢复 |
+
+## 支持的 Agent 
+
+|  | hook 事件 | 备注 |
+|---|---|---|
+| **Claude Code** | `PreToolUse` | 写 `~/.claude/settings.json`，幂等检测避免误删 |
+| **Cursor** | `beforeShellExecution` + `afterFileEdit` | 写 `~/.cursor/hooks.json` |
+| **Codex CLI** | `PreToolUse` | 需 `[features] hooks = true`；按 `config.toml.agentcfg-meta` 精确还原 |
+| **OpenCode** | `tool.execute.before` + `file.edited` | 复制 TypeScript 插件到 `.opencode/plugins/agentcfg.ts` |
 
 ## 技术栈
 
@@ -34,7 +43,7 @@
 - **依赖**：**零外部 npm 依赖**（所有能力使用 Node 内置 `fs` / `path` / `child_process` / `crypto`）
 - **版本控制**：[Git](https://git-scm.com/)（hook 自调用时不再次触发 hook；`--no-verify --no-gpg-sign`）
 - **CLI 入口**：`bin/agentcfg.js`
-- **跨平台**：Windows / macOS / Linux（所有 git 命令通过 `execFileSync` + 数组参数防注入）
+- **跨平台**：Windows / Linux（所有 git 命令通过 `execFileSync` + 数组参数防注入）
 - **AI Agent hook 适配**：Claude Code `PreToolUse`、Cursor `beforeShellExecution` + `afterFileEdit`、Codex CLI `PreToolUse`、OpenCode `tool.execute.before` + `file.edited`
 
 ## 快速开始
@@ -59,16 +68,7 @@ agentcfg init
 # ✅ 全部 agent 已安装 agentcfg
 ```
 
-## 支持的 AI 
-
-|  | hook 事件 | 备注 |
-|---|---|---|
-| **Claude Code** | `PreToolUse` | 写 `~/.claude/settings.json`，幂等检测避免误删 |
-| **Cursor** | `beforeShellExecution` + `afterFileEdit` | 写 `~/.cursor/hooks.json` |
-| **Codex CLI** | `PreToolUse` | 需 `[features] hooks = true`；按 `config.toml.agentcfg-meta` 精确还原 |
-| **OpenCode** | `tool.execute.before` + `file.edited` | 复制 TypeScript 插件到 `.opencode/plugins/agentcfg.ts` |
-
-## 命令一览
+### 命令一览
 
 ```bash
 agentcfg init                # 安装到当前 Agent 环境
@@ -85,6 +85,16 @@ agentcfg uninstall           # 卸载
 
 每个命令支持 `--help` 查看详细用法。
 
+## WebUI 仪表板(可选)
+
+```bash
+cd ~/.claude       # 或任意 agentcfg 已 init 的目录
+agentcfg ui        # 默认 127.0.0.1:3000
+agentcfg ui --port 8080 --open   # 自定义端口 + 自动开浏览器
+```
+
+打开 `http://127.0.0.1:3000` 看到**真实备份的全生命周期追踪历史**:
+
 ## 关键特性
 
 - **自动备份**：hook 监听 AI 的 `PreToolUse` / `beforeShellExecution` / `afterFileEdit` 等事件，**修改前**自动 `git commit` 留痕。
@@ -96,16 +106,6 @@ agentcfg uninstall           # 卸载
 - **90 天自动压缩**：默认按 tag 豁免 + 临时分支 + rebase `--onto` 合并过期 commit，带回滚分支。
 - **零外部依赖**：仅使用 Node 内置模块，npm 包体积小、安装快。
 - **WebUI 仪表板**:`agentcfg ui` 一行命令启动浏览器看备份历史(走势图 / 排行榜 / 时间线 / diff 高亮);Node 内置 `http` server,3 个 GET API + 静态 serve;零运行时依赖。
-
-## WebUI 仪表板(可选)
-
-```bash
-cd ~/.claude       # 或任意 agentcfg 已 init 的目录
-agentcfg ui        # 默认 127.0.0.1:3000
-agentcfg ui --port 8080 --open   # 自定义端口 + 自动开浏览器
-```
-
-打开 `http://127.0.0.1:3000` 看到**真实备份历史**:
 
 ## 对话式恢复（核心场景）
 
@@ -134,7 +134,6 @@ agentcfg ui --port 8080 --open   # 自定义端口 + 自动开浏览器
 ## Contributing
 
 - 报告 bug / 提需求：[GitHub Issues](../../issues)
-
 
 ## 卸载
 
