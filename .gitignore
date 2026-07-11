@@ -1,11 +1,6 @@
 node_modules/
 *.log
-
-# 开发过程产物
-.superpowers/
 docs/
-
-# 构建产物
 *.tgz
 CLAUDE.md
 .claude/
