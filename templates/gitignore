@@ -15,7 +15,6 @@ session-env/
 tasks/
 
 # Claude 内部缓存
-cc-haha/
 telemetry/
 
 # 插件缓存
