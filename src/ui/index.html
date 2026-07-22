@@ -963,6 +963,12 @@ async function loadLogChunk() {
     hideLoadingOverlay();
   } catch (err) {
     console.error('loadLog failed:', err);
+    // NOT_A_GIT_REPO 已在 loadStats 中以 fatal 层级完整展示引导信息，
+    // 此处不再重复报错，且不隐藏 loading overlay（否则启动失败引导会被覆盖）
+    if (err.code === 'NOT_A_GIT_REPO') {
+      logExhausted = true;
+      return;
+    }
     showApiError('加载 commit 列表失败: ' + err.message);
     hideLoadingOverlay();
   } finally {

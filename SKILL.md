@@ -276,9 +276,31 @@ du -sh ~/__AGENT_DIR__/.git
 Get-ChildItem ~/__AGENT_DIR__/.git -Recurse | Measure-Object -Property Length -Sum
 ```
 
----
+### 4.1 WebUI 仪表板（图形界面）
 
-## 5. 故障排查
+当用户想用图形界面浏览备份历史时：
+
+```bash
+cd ~/__AGENT_DIR__ && agents-cfgit ui --open
+```
+
+**关键：必须在 `~/__AGENT_DIR__` 目录下执行**，因为 `ui` 命令以当前工作目录为数据源（读取 git 历史）。如果在其他目录（如项目仓库）下执行，WebUI 会报"当前目录不是 agents-cfgit 管理的 git 仓库"。
+
+启动后自动打开浏览器访问 `http://127.0.0.1:3000`。
+
+停止：
+```bash
+agents-cfgit ui --stop              # 基于 PID 文件关闭
+# 或在终端按 Ctrl+C
+```
+
+如果端口被占用：
+```bash
+agents-cfgit ui --kill --open       # 启动前自动释放端口
+agents-cfgit ui --port 3001 --open  # 换端口
+```
+
+---
 
 ### 5.1 git 命令报 "fatal: not a git repository"
 
